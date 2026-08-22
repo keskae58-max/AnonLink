@@ -1,0 +1,70 @@
+{
+  "profile": {
+    "name": "LilaVoss",
+    "description": "Join and chat with me here 😘",
+    "pfp": "assets/pfp-lila.png"
+  },
+  "channel": {
+    "segments": [
+      "ZW1hbGU=",
+      "aHR0cHM6",
+      "Ly90Lm1l",
+      "L2dpZ2ds"
+    ],
+    "order": [
+      1,
+      2,
+      3,
+      0
+    ]
+  },
+  "tracking": {
+    "platforms": [
+      {
+        "id": "instagram",
+        "label": "Instagram",
+        "enabled": true
+      },
+      {
+        "id": "threads",
+        "label": "Threads",
+        "enabled": true
+      },
+      {
+        "id": "tiktok",
+        "label": "TikTok",
+        "enabled": true
+      },
+      {
+        "id": "twitter",
+        "label": "X / Twitter",
+        "enabled": true
+      },
+      {
+        "id": "facebook",
+        "label": "Facebook",
+        "enabled": true
+      },
+      {
+        "id": "snapchat",
+        "label": "Snapchat",
+        "enabled": true
+      },
+      {
+        "id": "linkedin",
+        "label": "LinkedIn",
+        "enabled": true
+      }
+    ]
+  },
+  "effects": {
+    "particles": false,
+    "glassBlur": 18,
+    "strokeWidth": 1,
+    "glowIntensity": 0.35
+  },
+  "browser": {
+    "requireChrome": false,
+    "blockInAppBrowsers": true
+  }
+}
