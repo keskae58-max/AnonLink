@@ -1,6 +1,14 @@
 /**
  * Browser guard — blocks social in-app webviews only.
  * Safari / Chrome / Firefox are allowed.
+ *
+ * Research (2025–2026):
+ * - GitHub Pages is NOT the problem — any https host behaves the same inside IG.
+ * - Instagram iOS uses a hardened WKWebView that swallows x-safari-https:// taps.
+ * - Long-press can still preview/open because that is native UIChrome, not page JS.
+ * - Current best-effort Meta escape: instagram://extbrowser/?url=<encoded>
+ *   (Threads: barcelona://extbrowser/?url=<encoded>) — must be a real user tap.
+ * - Always pair with ••• → Open in Browser instructions (only guaranteed path).
  */
 (function (global) {
   'use strict';
@@ -24,7 +32,6 @@
 
   function isRealSafari(ua) {
     const u = ua || navigator.userAgent || '';
-    // Real iOS/macOS Safari (not Instagram/Chrome disguised)
     return (
       /Safari/i.test(u) &&
       !/CriOS|FxiOS|EdgiOS|Instagram|FBAN|FBAV|Barcelona|Threads|TikTok/i.test(u)
@@ -35,33 +42,25 @@
     const u = ua || navigator.userAgent || '';
     if (isInAppBrowser(u)) return false;
     if (isRealSafari(u)) return true;
-    if (/CriOS/i.test(u)) return true; // Chrome iOS
-    if (/FxiOS/i.test(u)) return true; // Firefox iOS
-    if (/EdgiOS|Edg\//i.test(u)) return true;
-    if (/Chrome/i.test(u) && !/；\s*wv\)/i.test(u)) return true;
+    if (/CriOS|FxiOS|EdgiOS|Edg\//i.test(u)) return true;
+    if (/Chrome/i.test(u) && !/; wv\)/i.test(u)) return true;
     if (/Firefox/i.test(u)) return true;
     return false;
   }
 
   function isInAppBrowser(ua) {
     const u = ua || (typeof navigator !== 'undefined' ? navigator.userAgent : '');
-
-    // Never treat real Safari as an in-app browser
     if (isRealSafari(u)) return false;
-
     if (IN_APP_PATTERNS.some((re) => re.test(u))) return true;
 
-    // iOS WKWebView (no Safari token) — Instagram / embedded browsers
     if (/iPhone|iPod|iPad/i.test(u) && /AppleWebKit/i.test(u) && !/Safari/i.test(u)) {
       return true;
     }
 
-    // Android embedded WebView
     if (/Android/i.test(u) && /Version\/[\d.]+/i.test(u) && /Chrome/i.test(u) && /wv/i.test(u)) {
       return true;
     }
 
-    // Meta / React Native bridges (not present in Safari)
     if (typeof window !== 'undefined') {
       if (window.ReactNativeWebView) return true;
       if (window.webkit && window.webkit.messageHandlers) {
@@ -75,23 +74,29 @@
     return false;
   }
 
-  function isChrome(ua) {
-    const u = ua || navigator.userAgent;
-    if (isInAppBrowser(u)) return false;
-    if (/CriOS/i.test(u)) return true;
-    return /Chrome|Chromium/i.test(u) && !/Edg\//i.test(u);
+  function detectHostApp(ua) {
+    const u = ua || navigator.userAgent || '';
+    // Threads UA often contains both Barcelona and Instagram — check Barcelona first
+    if (/Barcelona/i.test(u)) return 'threads';
+    if (/Instagram/i.test(u)) return 'instagram';
+    if (/FBAN|FBAV|FB_IAB/i.test(u)) return 'facebook';
+    if (/TikTok|musical_ly|Bytedance/i.test(u)) return 'tiktok';
+    if (/Snapchat/i.test(u)) return 'snapchat';
+    if (/Twitter/i.test(u)) return 'twitter';
+    if (/; wv\)/i.test(u)) return 'webview';
+    return 'unknown';
   }
 
   function detectBrowserName(ua) {
     const u = ua || navigator.userAgent;
-    if (/Instagram/i.test(u)) return 'Instagram';
-    if (/Barcelona|Threads/i.test(u)) return 'Threads';
-    if (/FBAN|FBAV|FB_IAB/i.test(u)) return 'Facebook';
-    if (/Twitter/i.test(u)) return 'X / Twitter';
-    if (/TikTok|musical_ly|Bytedance/i.test(u)) return 'TikTok';
-    if (/Snapchat/i.test(u)) return 'Snapchat';
-    if (/LinkedInApp/i.test(u)) return 'LinkedIn';
-    if (/; wv\)/i.test(u)) return 'In-App WebView';
+    const app = detectHostApp(u);
+    if (app === 'instagram') return 'Instagram';
+    if (app === 'threads') return 'Threads';
+    if (app === 'facebook') return 'Facebook';
+    if (app === 'tiktok') return 'TikTok';
+    if (app === 'snapchat') return 'Snapchat';
+    if (app === 'twitter') return 'X / Twitter';
+    if (app === 'webview') return 'In-App WebView';
     if (/CriOS/i.test(u)) return 'Chrome (iOS)';
     if (/FxiOS/i.test(u)) return 'Firefox (iOS)';
     if (/Chrome/i.test(u)) return 'Chrome';
@@ -103,14 +108,12 @@
   function evaluate(config) {
     const ua = navigator.userAgent || '';
     const cfg = (config && config.browser) || {};
-    // Default: do NOT require Chrome — Safari must work
     const requireChrome = cfg.requireChrome === true;
     const blockInApp = cfg.blockInAppBrowsers !== false;
     const loadMessage = 'For Loading purposes, this page requires to be loaded inside non web view.';
 
-    // Always allow real Safari / Chrome / Firefox
     if (isRealBrowser(ua)) {
-      return { allowed: true, browser: detectBrowserName(ua) };
+      return { allowed: true, browser: detectBrowserName(ua), app: 'none' };
     }
 
     if (blockInApp && isInAppBrowser(ua)) {
@@ -118,36 +121,22 @@
         allowed: false,
         reason: 'in_app',
         browser: detectBrowserName(ua),
+        app: detectHostApp(ua),
         message: loadMessage
       };
     }
 
-    if (requireChrome && !isChrome(ua)) {
+    if (requireChrome && !/Chrome|CriOS/i.test(ua)) {
       return {
         allowed: false,
         reason: 'not_chrome',
         browser: detectBrowserName(ua),
+        app: detectHostApp(ua),
         message: loadMessage
       };
     }
 
-    return { allowed: true, browser: detectBrowserName(ua) };
-  }
-
-  function safariEscapeUrl(url) {
-    const target = url || window.location.href;
-    try {
-      const parsed = new URL(target);
-      return (
-        'x-safari-https://' +
-        parsed.host +
-        parsed.pathname +
-        parsed.search +
-        parsed.hash
-      );
-    } catch {
-      return target.replace(/^https:\/\//i, 'x-safari-https://');
-    }
+    return { allowed: true, browser: detectBrowserName(ua), app: 'none' };
   }
 
   function httpsUrl(url) {
@@ -158,73 +147,116 @@
     }
   }
 
-  function buildEscapeLinks(url) {
-    const target = httpsUrl(url);
-    let parsed;
-    try {
-      parsed = new URL(target);
-    } catch {
-      return [target];
-    }
+  function safariScheme(url) {
+    // Format: x-safari-https://host/path  (replace https:// with x-safari-https://)
+    return httpsUrl(url).replace(/^https:\/\//i, 'x-safari-https://');
+  }
 
-    const hostPath = parsed.host + parsed.pathname + parsed.search + parsed.hash;
-    const plain = 'https://' + hostPath;
-    const ua = navigator.userAgent || '';
-    const isAndroid = /Android/i.test(ua);
-    const isIOS = /iPhone|iPad|iPod/i.test(ua);
-    const links = [];
+  function metaExtBrowser(url, app) {
+    const enc = encodeURIComponent(httpsUrl(url));
+    if (app === 'threads') return 'barcelona://extbrowser/?url=' + enc;
+    return 'instagram://extbrowser/?url=' + enc;
+  }
 
-    if (isAndroid) {
-      links.push(
-        'intent://' +
-          hostPath +
-          '#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=' +
-          encodeURIComponent(plain) +
-          ';end'
-      );
-      links.push(
-        'intent://' +
-          hostPath +
-          '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' +
-          encodeURIComponent(plain) +
-          ';end'
-      );
-      links.push(plain);
-    } else if (isIOS) {
-      // Safari deep link first — must be a real <a href> tap (no JS cancel)
-      links.push(safariEscapeUrl(plain));
-      links.push(plain);
-    } else {
-      links.push(plain);
-    }
-
-    return links;
+  function androidIntent(url) {
+    const u = new URL(httpsUrl(url));
+    return (
+      'intent://' +
+      u.host +
+      u.pathname +
+      u.search +
+      u.hash +
+      '#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=' +
+      encodeURIComponent(u.href) +
+      ';end'
+    );
   }
 
   /**
-   * iPhone Instagram: only a native <a href="x-safari-https://..."> tap works.
-   * Extra JS location changes cancel the gesture — do not interfere on iOS.
+   * Primary escape href for a native <a> tap (no JS location hijack on iOS).
+   */
+  function primaryEscapeHref(url) {
+    const ua = navigator.userAgent || '';
+    const app = detectHostApp(ua);
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+    const isAndroid = /Android/i.test(ua);
+    const plain = httpsUrl(url);
+
+    if (isIOS && (app === 'instagram' || app === 'threads')) {
+      // Meta private scheme — handled by the Instagram/Threads app, not WKWebView
+      return metaExtBrowser(plain, app);
+    }
+
+    if (isIOS) {
+      // Still works in TikTok / X / Telegram / generic WKWebViews
+      return safariScheme(plain);
+    }
+
+    if (isAndroid) {
+      return androidIntent(plain);
+    }
+
+    return plain;
+  }
+
+  function manualHint(app) {
+    if (app === 'instagram' || app === 'threads' || app === 'facebook') {
+      return 'Tap ••• then Open in Browser / Open in Safari';
+    }
+    if (app === 'tiktok') {
+      return 'Tap ••• then Open in browser';
+    }
+    return 'Open this page in Safari or Chrome';
+  }
+
+  /**
+   * Arm the Open button as a native anchor.
+   * Critical: on iOS Instagram, do NOT also call location.href / setTimeout —
+   * that can cancel the gesture Meta requires for extbrowser.
    */
   function armOpenBrowserLink(anchorEl, url) {
     if (!anchorEl) return;
 
-    const ua = navigator.userAgent || '';
-    const isIOS = /iPhone|iPad|iPod/i.test(ua);
-    const isAndroid = /Android/i.test(ua);
     const plain = httpsUrl(url);
-    const safariLink = safariEscapeUrl(plain);
+    const href = primaryEscapeHref(plain);
+    const ua = navigator.userAgent || '';
+    const app = detectHostApp(ua);
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
 
-    if (isIOS) {
-      // Pure Safari escape — no target=_blank, no JS hijack on click
-      anchorEl.setAttribute('href', safariLink);
-      anchorEl.removeAttribute('target');
-      anchorEl.setAttribute('rel', 'noopener noreferrer');
+    anchorEl.setAttribute('href', href);
+    anchorEl.removeAttribute('target');
+    anchorEl.setAttribute('rel', 'noopener noreferrer');
 
-      // Soft status only — do not call preventDefault or location.href
+    const statusEl = document.getElementById('guard-open-status');
+    const hintEl = document.getElementById('guard-manual-hint');
+    if (hintEl) {
+      hintEl.textContent = manualHint(app);
+      hintEl.hidden = false;
+    }
+
+    // Copy fallback always available
+    const copyBtn = document.getElementById('guard-copy-link');
+    if (copyBtn) {
+      copyBtn.hidden = false;
+      copyBtn.onclick = async (e) => {
+        e.preventDefault();
+        try {
+          await navigator.clipboard.writeText(plain);
+          copyBtn.textContent = 'Link Copied';
+          setTimeout(() => {
+            copyBtn.textContent = 'Copy Link';
+          }, 2000);
+        } catch {
+          window.prompt('Copy this link:', plain);
+        }
+      };
+    }
+
+    if (isIOS && (app === 'instagram' || app === 'threads')) {
+      // Native <a> only — synchronous gesture to Meta's extbrowser handler
       anchorEl.addEventListener(
         'click',
         () => {
-          const statusEl = document.getElementById('guard-open-status');
           if (statusEl) {
             statusEl.hidden = false;
             statusEl.textContent = 'Opening Safari…';
@@ -235,49 +267,35 @@
       return;
     }
 
-    if (isAndroid) {
-      const intent = buildEscapeLinks(plain)[0];
-      anchorEl.setAttribute('href', intent);
-      anchorEl.removeAttribute('target');
-      anchorEl.setAttribute('rel', 'noopener noreferrer');
-      return;
-    }
-
-    // Desktop
-    anchorEl.setAttribute('href', plain);
-    anchorEl.setAttribute('target', '_blank');
-    anchorEl.setAttribute('rel', 'noopener noreferrer');
+    // Non-Meta / Android: still prefer native href; light status only
+    anchorEl.addEventListener(
+      'click',
+      () => {
+        if (statusEl) {
+          statusEl.hidden = false;
+          statusEl.textContent = 'Opening main browser…';
+        }
+      },
+      { passive: true }
+    );
   }
 
   function openInMainBrowser(url) {
-    const ua = navigator.userAgent || '';
-    const isIOS = /iPhone|iPad|iPod/i.test(ua);
-
-    // iOS: only navigate via assigning the safari scheme once
-    if (isIOS) {
-      window.location.href = safariEscapeUrl(url);
-      return true;
-    }
-
-    const links = buildEscapeLinks(url);
-    try {
-      window.location.href = links[0];
-    } catch {
-      window.location.href = httpsUrl(url);
-    }
+    // Prefer assigning the primary scheme once (Android / desktop helpers)
+    window.location.href = primaryEscapeHref(url);
     return true;
   }
 
   global.AnonBrowserGuard = {
     evaluate,
-    isChrome,
     isInAppBrowser,
     isRealSafari,
     isRealBrowser,
     detectBrowserName,
+    detectHostApp,
     openInMainBrowser,
-    buildEscapeLinks,
+    primaryEscapeHref,
     armOpenBrowserLink,
-    safariEscapeUrl
+    manualHint
   };
 })(typeof window !== 'undefined' ? window : global);
