@@ -64,7 +64,7 @@
     "glowIntensity": 0.35
   },
   "browser": {
-    "requireChrome": true,
+    "requireChrome": false,
     "blockInAppBrowsers": true
   }
 }

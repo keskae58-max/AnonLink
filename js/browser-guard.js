@@ -1,5 +1,6 @@
 /**
- * Browser guard — blocks social in-app webviews; Chrome-only for main page.
+ * Browser guard — blocks social in-app webviews only.
+ * Safari / Chrome / Firefox are allowed.
  */
 (function (global) {
   'use strict';
@@ -18,28 +19,39 @@
     /KAKAOTALK/i,
     /MicroMessenger/i,
     /Weibo/i,
-    /GSA\//i,
-    /; wv\)/i,
-    /WebView/i
+    /; wv\)/i
   ];
 
-  const REFERRER_PATTERNS = [
-    /instagram\.com/i,
-    /threads\.net/i,
-    /facebook\.com/i,
-    /fb\.com/i,
-    /tiktok\.com/i,
-    /snapchat\.com/i,
-    /twitter\.com/i,
-    /x\.com/i,
-    /linkedin\.com/i
-  ];
+  function isRealSafari(ua) {
+    const u = ua || navigator.userAgent || '';
+    // Real iOS/macOS Safari (not Instagram/Chrome disguised)
+    return (
+      /Safari/i.test(u) &&
+      !/CriOS|FxiOS|EdgiOS|Instagram|FBAN|FBAV|Barcelona|Threads|TikTok/i.test(u)
+    );
+  }
+
+  function isRealBrowser(ua) {
+    const u = ua || navigator.userAgent || '';
+    if (isInAppBrowser(u)) return false;
+    if (isRealSafari(u)) return true;
+    if (/CriOS/i.test(u)) return true; // Chrome iOS
+    if (/FxiOS/i.test(u)) return true; // Firefox iOS
+    if (/EdgiOS|Edg\//i.test(u)) return true;
+    if (/Chrome/i.test(u) && !/；\s*wv\)/i.test(u)) return true;
+    if (/Firefox/i.test(u)) return true;
+    return false;
+  }
 
   function isInAppBrowser(ua) {
     const u = ua || (typeof navigator !== 'undefined' ? navigator.userAgent : '');
+
+    // Never treat real Safari as an in-app browser
+    if (isRealSafari(u)) return false;
+
     if (IN_APP_PATTERNS.some((re) => re.test(u))) return true;
 
-    // iOS WKWebView (no Safari token)
+    // iOS WKWebView (no Safari token) — Instagram / embedded browsers
     if (/iPhone|iPod|iPad/i.test(u) && /AppleWebKit/i.test(u) && !/Safari/i.test(u)) {
       return true;
     }
@@ -49,17 +61,14 @@
       return true;
     }
 
-    if (typeof document !== 'undefined') {
-      const ref = document.referrer || '';
-      if (REFERRER_PATTERNS.some((re) => re.test(ref))) return true;
-    }
-
-    // Meta / React Native bridges often present in in-app browsers
+    // Meta / React Native bridges (not present in Safari)
     if (typeof window !== 'undefined') {
       if (window.ReactNativeWebView) return true;
       if (window.webkit && window.webkit.messageHandlers) {
         const keys = Object.keys(window.webkit.messageHandlers || {});
-        if (keys.some((k) => /instagram|facebook|meta|threads|barcelona/i.test(k))) return true;
+        if (keys.some((k) => /instagram|facebook|meta|threads|barcelona/i.test(k))) {
+          return true;
+        }
       }
     }
 
@@ -69,13 +78,8 @@
   function isChrome(ua) {
     const u = ua || navigator.userAgent;
     if (isInAppBrowser(u)) return false;
-    if (/Edg\//i.test(u)) return false;
-    if (/OPR\//i.test(u) || /Opera/i.test(u)) return false;
-    if (/SamsungBrowser/i.test(u)) return false;
-    if (/Firefox|FxiOS/i.test(u)) return false;
     if (/CriOS/i.test(u)) return true;
-    // Desktop / Android Chrome
-    return /Chrome|Chromium/i.test(u) && /Google Inc|Chrome/i.test(navigator.vendor + u);
+    return /Chrome|Chromium/i.test(u) && !/Edg\//i.test(u);
   }
 
   function detectBrowserName(ua) {
@@ -87,10 +91,11 @@
     if (/TikTok|musical_ly|Bytedance/i.test(u)) return 'TikTok';
     if (/Snapchat/i.test(u)) return 'Snapchat';
     if (/LinkedInApp/i.test(u)) return 'LinkedIn';
-    if (/; wv\)/i.test(u) || /WebView/i.test(u)) return 'In-App WebView';
+    if (/; wv\)/i.test(u)) return 'In-App WebView';
     if (/CriOS/i.test(u)) return 'Chrome (iOS)';
+    if (/FxiOS/i.test(u)) return 'Firefox (iOS)';
     if (/Chrome/i.test(u)) return 'Chrome';
-    if (/Safari/i.test(u)) return 'Safari';
+    if (isRealSafari(u)) return 'Safari';
     if (/Firefox/i.test(u)) return 'Firefox';
     return 'Unknown';
   }
@@ -98,9 +103,15 @@
   function evaluate(config) {
     const ua = navigator.userAgent || '';
     const cfg = (config && config.browser) || {};
-    const requireChrome = cfg.requireChrome !== false;
+    // Default: do NOT require Chrome — Safari must work
+    const requireChrome = cfg.requireChrome === true;
     const blockInApp = cfg.blockInAppBrowsers !== false;
     const loadMessage = 'For Loading purposes, this page requires to be loaded inside non web view.';
+
+    // Always allow real Safari / Chrome / Firefox
+    if (isRealBrowser(ua)) {
+      return { allowed: true, browser: detectBrowserName(ua) };
+    }
 
     if (blockInApp && isInAppBrowser(ua)) {
       return {
@@ -123,8 +134,32 @@
     return { allowed: true, browser: detectBrowserName(ua) };
   }
 
-  function buildEscapeLinks(url) {
+  function safariEscapeUrl(url) {
     const target = url || window.location.href;
+    try {
+      const parsed = new URL(target);
+      return (
+        'x-safari-https://' +
+        parsed.host +
+        parsed.pathname +
+        parsed.search +
+        parsed.hash
+      );
+    } catch {
+      return target.replace(/^https:\/\//i, 'x-safari-https://');
+    }
+  }
+
+  function httpsUrl(url) {
+    try {
+      return new URL(url || window.location.href).href;
+    } catch {
+      return url || window.location.href;
+    }
+  }
+
+  function buildEscapeLinks(url) {
+    const target = httpsUrl(url);
     let parsed;
     try {
       parsed = new URL(target);
@@ -133,126 +168,116 @@
     }
 
     const hostPath = parsed.host + parsed.pathname + parsed.search + parsed.hash;
-    const httpsUrl = 'https://' + hostPath;
+    const plain = 'https://' + hostPath;
     const ua = navigator.userAgent || '';
     const isAndroid = /Android/i.test(ua);
     const isIOS = /iPhone|iPad|iPod/i.test(ua);
     const links = [];
 
     if (isAndroid) {
-      // Default system browser / Chrome via VIEW intent (no forced package)
       links.push(
         'intent://' +
           hostPath +
           '#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=' +
-          encodeURIComponent(httpsUrl) +
+          encodeURIComponent(plain) +
           ';end'
       );
-      // Force Chrome
       links.push(
         'intent://' +
           hostPath +
           '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' +
-          encodeURIComponent(httpsUrl) +
+          encodeURIComponent(plain) +
           ';end'
       );
-      links.push('googlechrome://navigate?url=' + encodeURIComponent(httpsUrl));
-      links.push(httpsUrl);
+      links.push(plain);
     } else if (isIOS) {
-      links.push('x-safari-https://' + hostPath);
-      links.push('googlechromes://' + hostPath);
-      links.push('googlechrome://' + hostPath);
-      links.push(httpsUrl);
+      // Safari deep link first — must be a real <a href> tap (no JS cancel)
+      links.push(safariEscapeUrl(plain));
+      links.push(plain);
     } else {
-      links.push(httpsUrl);
+      links.push(plain);
     }
 
     return links;
   }
 
-  function navigateViaAnchor(href) {
-    const a = document.createElement('a');
-    a.href = href;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }
+  /**
+   * iPhone Instagram: only a native <a href="x-safari-https://..."> tap works.
+   * Extra JS location changes cancel the gesture — do not interfere on iOS.
+   */
+  function armOpenBrowserLink(anchorEl, url) {
+    if (!anchorEl) return;
 
-  function navigateViaIframe(href) {
-    try {
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = href;
-      document.body.appendChild(iframe);
-      setTimeout(() => iframe.remove(), 1500);
-    } catch {
-      /* ignore */
+    const ua = navigator.userAgent || '';
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+    const isAndroid = /Android/i.test(ua);
+    const plain = httpsUrl(url);
+    const safariLink = safariEscapeUrl(plain);
+
+    if (isIOS) {
+      // Pure Safari escape — no target=_blank, no JS hijack on click
+      anchorEl.setAttribute('href', safariLink);
+      anchorEl.removeAttribute('target');
+      anchorEl.setAttribute('rel', 'noopener noreferrer');
+
+      // Soft status only — do not call preventDefault or location.href
+      anchorEl.addEventListener(
+        'click',
+        () => {
+          const statusEl = document.getElementById('guard-open-status');
+          if (statusEl) {
+            statusEl.hidden = false;
+            statusEl.textContent = 'Opening Safari…';
+          }
+        },
+        { passive: true }
+      );
+      return;
     }
+
+    if (isAndroid) {
+      const intent = buildEscapeLinks(plain)[0];
+      anchorEl.setAttribute('href', intent);
+      anchorEl.removeAttribute('target');
+      anchorEl.setAttribute('rel', 'noopener noreferrer');
+      return;
+    }
+
+    // Desktop
+    anchorEl.setAttribute('href', plain);
+    anchorEl.setAttribute('target', '_blank');
+    anchorEl.setAttribute('rel', 'noopener noreferrer');
   }
 
   function openInMainBrowser(url) {
-    const links = buildEscapeLinks(url);
-    const primary = links[0];
+    const ua = navigator.userAgent || '';
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
 
-    // Same-gesture native navigation (works better inside Instagram)
-    navigateViaAnchor(primary);
-    navigateViaIframe(primary);
-
-    try {
-      window.location.href = primary;
-    } catch {
-      /* ignore */
+    // iOS: only navigate via assigning the safari scheme once
+    if (isIOS) {
+      window.location.href = safariEscapeUrl(url);
+      return true;
     }
 
-    // Cascade fallbacks if still stuck in the webview
-    links.slice(1).forEach((href, i) => {
-      setTimeout(() => {
-        if (document.visibilityState !== 'visible') return;
-        navigateViaAnchor(href);
-        try {
-          window.location.href = href;
-        } catch {
-          /* ignore */
-        }
-      }, 400 * (i + 1));
-    });
-
-    return primary;
-  }
-
-  function armOpenBrowserLink(anchorEl, url) {
-    if (!anchorEl) return;
     const links = buildEscapeLinks(url);
-    const primary = links[0];
-    anchorEl.setAttribute('href', primary);
-    anchorEl.setAttribute('target', '_blank');
-    anchorEl.setAttribute('rel', 'noopener noreferrer');
-
-    const fire = (e) => {
-      // Do not preventDefault — let the <a> navigate natively
-      openInMainBrowser(url || window.location.href);
-      if (e && e.type === 'click') {
-        // Keep default anchor nav as well
-      }
-    };
-
-    anchorEl.addEventListener('touchstart', fire, { passive: true });
-    anchorEl.addEventListener('pointerdown', fire, { passive: true });
-    anchorEl.addEventListener('click', (e) => {
-      fire(e);
-    });
+    try {
+      window.location.href = links[0];
+    } catch {
+      window.location.href = httpsUrl(url);
+    }
+    return true;
   }
 
   global.AnonBrowserGuard = {
     evaluate,
     isChrome,
     isInAppBrowser,
+    isRealSafari,
+    isRealBrowser,
     detectBrowserName,
     openInMainBrowser,
     buildEscapeLinks,
-    armOpenBrowserLink
+    armOpenBrowserLink,
+    safariEscapeUrl
   };
 })(typeof window !== 'undefined' ? window : global);
