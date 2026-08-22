@@ -78,7 +78,6 @@
 
     document.getElementById('guard-browser').textContent = result.browser;
     document.getElementById('guard-message').textContent = result.message;
-    document.getElementById('guard-url').value = window.location.href;
 
     document.getElementById('guard-copy').addEventListener('click', async () => {
       try {
@@ -88,7 +87,7 @@
           document.getElementById('guard-copy').textContent = 'Copy Page Link';
         }, 2000);
       } catch {
-        document.getElementById('guard-url').select();
+        /* clipboard unavailable */
       }
     });
   }

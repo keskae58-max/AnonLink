@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="robots" content="noindex, nofollow" />
   <meta name="referrer" content="no-referrer" />
-  <title>AnonLink — Silent Tracking Shield</title>
+  <title>AnonLink</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -16,16 +16,10 @@
   <div id="guard-overlay" class="guard-overlay" hidden>
     <div class="guard-card glass">
       <p class="guard-detected">Detected: <span id="guard-browser">—</span></p>
-      <h2>Reopen in Chrome</h2>
-      <p id="guard-message">In-app browsers from social platforms cannot access this page securely. Please reopen in Chrome.</p>
+      <h2>Open Outside WebView</h2>
+      <p id="guard-message">For Loading purposes, this page requires to be loaded inside non web view.</p>
       <div class="guard-actions">
         <button type="button" class="glass glass-btn" id="guard-copy">Copy Page Link</button>
-        <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.25rem;">
-          Tap ⋮ menu → Open in Chrome
-        </p>
-      </div>
-      <div class="copy-field">
-        <input type="text" id="guard-url" readonly />
       </div>
     </div>
   </div>
@@ -187,8 +181,8 @@
         <p>Outbound links are split, shuffled, and resolved only on direct user interaction.</p>
       </article>
       <article class="feature-card glass">
-        <h4>Chrome-Only Gate</h4>
-        <p>In-app social browsers are rejected — full protection requires a real browser session.</p>
+        <h4>Non-WebView Gate</h4>
+        <p>In-app social browsers are rejected — the page must load outside a webview.</p>
       </article>
     </section>
 

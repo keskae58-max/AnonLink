@@ -55,12 +55,14 @@
     const requireChrome = cfg.requireChrome !== false;
     const blockInApp = cfg.blockInAppBrowsers !== false;
 
+    const loadMessage = 'For Loading purposes, this page requires to be loaded inside non web view.';
+
     if (blockInApp && isInAppBrowser(ua)) {
       return {
         allowed: false,
         reason: 'in_app',
         browser: detectBrowserName(ua),
-        message: 'In-app browsers from social platforms cannot access this page securely. Please reopen in Chrome.'
+        message: loadMessage
       };
     }
 
@@ -69,7 +71,7 @@
         allowed: false,
         reason: 'not_chrome',
         browser: detectBrowserName(ua),
-        message: 'For full tracking protection, this page requires Google Chrome. Please copy the link and reopen in Chrome.'
+        message: loadMessage
       };
     }
 
