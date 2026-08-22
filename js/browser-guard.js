@@ -123,55 +123,127 @@
     return { allowed: true, browser: detectBrowserName(ua) };
   }
 
-  function openInMainBrowser(url) {
+  function buildEscapeLinks(url) {
     const target = url || window.location.href;
-    const ua = navigator.userAgent || '';
-    const isAndroid = /Android/i.test(ua);
-    const isIOS = /iPhone|iPad|iPod/i.test(ua);
-
     let parsed;
     try {
       parsed = new URL(target);
     } catch {
-      window.location.href = target;
-      return false;
+      return [target];
     }
 
-    const pathAndQuery = parsed.pathname + parsed.search + parsed.hash;
+    const hostPath = parsed.host + parsed.pathname + parsed.search + parsed.hash;
+    const httpsUrl = 'https://' + hostPath;
+    const ua = navigator.userAgent || '';
+    const isAndroid = /Android/i.test(ua);
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+    const links = [];
 
     if (isAndroid) {
-      // Opens in Chrome (or system handler) via Android Intent
-      const intent =
+      // Default system browser / Chrome via VIEW intent (no forced package)
+      links.push(
         'intent://' +
-        parsed.host +
-        pathAndQuery +
-        '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' +
-        encodeURIComponent(target) +
-        ';end';
-      window.location.href = intent;
-      return true;
+          hostPath +
+          '#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=' +
+          encodeURIComponent(httpsUrl) +
+          ';end'
+      );
+      // Force Chrome
+      links.push(
+        'intent://' +
+          hostPath +
+          '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' +
+          encodeURIComponent(httpsUrl) +
+          ';end'
+      );
+      links.push('googlechrome://navigate?url=' + encodeURIComponent(httpsUrl));
+      links.push(httpsUrl);
+    } else if (isIOS) {
+      links.push('x-safari-https://' + hostPath);
+      links.push('googlechromes://' + hostPath);
+      links.push('googlechrome://' + hostPath);
+      links.push(httpsUrl);
+    } else {
+      links.push(httpsUrl);
     }
 
-    if (isIOS) {
-      // Escape Instagram / Threads webview into Safari
-      window.location.href = 'x-safari-https://' + parsed.host + pathAndQuery;
+    return links;
+  }
 
-      // Fallback: Chrome on iOS if Safari scheme is ignored
+  function navigateViaAnchor(href) {
+    const a = document.createElement('a');
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  function navigateViaIframe(href) {
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = href;
+      document.body.appendChild(iframe);
+      setTimeout(() => iframe.remove(), 1500);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function openInMainBrowser(url) {
+    const links = buildEscapeLinks(url);
+    const primary = links[0];
+
+    // Same-gesture native navigation (works better inside Instagram)
+    navigateViaAnchor(primary);
+    navigateViaIframe(primary);
+
+    try {
+      window.location.href = primary;
+    } catch {
+      /* ignore */
+    }
+
+    // Cascade fallbacks if still stuck in the webview
+    links.slice(1).forEach((href, i) => {
       setTimeout(() => {
-        if (document.visibilityState === 'visible') {
-          window.location.href =
-            'googlechrome://' + parsed.host + pathAndQuery;
+        if (document.visibilityState !== 'visible') return;
+        navigateViaAnchor(href);
+        try {
+          window.location.href = href;
+        } catch {
+          /* ignore */
         }
-      }, 700);
-      return true;
-    }
+      }, 400 * (i + 1));
+    });
 
-    // Desktop / other — open in the default external browser window
-    const win = window.open(target, '_blank', 'noopener,noreferrer');
-    if (!win) {
-      window.location.href = target;
-    }
-    return true;
+    return primary;
+  }
+
+  function armOpenBrowserLink(anchorEl, url) {
+    if (!anchorEl) return;
+    const links = buildEscapeLinks(url);
+    const primary = links[0];
+    anchorEl.setAttribute('href', primary);
+    anchorEl.setAttribute('target', '_blank');
+    anchorEl.setAttribute('rel', 'noopener noreferrer');
+
+    const fire = (e) => {
+      // Do not preventDefault — let the <a> navigate natively
+      openInMainBrowser(url || window.location.href);
+      if (e && e.type === 'click') {
+        // Keep default anchor nav as well
+      }
+    };
+
+    anchorEl.addEventListener('touchstart', fire, { passive: true });
+    anchorEl.addEventListener('pointerdown', fire, { passive: true });
+    anchorEl.addEventListener('click', (e) => {
+      fire(e);
+    });
   }
 
   global.AnonBrowserGuard = {
@@ -179,6 +251,8 @@
     isChrome,
     isInAppBrowser,
     detectBrowserName,
-    openInMainBrowser
+    openInMainBrowser,
+    buildEscapeLinks,
+    armOpenBrowserLink
   };
 })(typeof window !== 'undefined' ? window : global);

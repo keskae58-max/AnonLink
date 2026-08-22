@@ -76,9 +76,19 @@
     document.getElementById('guard-browser').textContent = result.browser;
     document.getElementById('guard-message').textContent = result.message;
 
-    document.getElementById('guard-open-browser').addEventListener('click', (e) => {
-      e.preventDefault();
-      AnonBrowserGuard.openInMainBrowser(window.location.href);
+    const openBtn = document.getElementById('guard-open-browser');
+    const statusEl = document.getElementById('guard-open-status');
+    const pageUrl = window.location.href;
+
+    AnonBrowserGuard.armOpenBrowserLink(openBtn, pageUrl);
+
+    openBtn.addEventListener('click', () => {
+      if (statusEl) {
+        statusEl.hidden = false;
+        statusEl.textContent = 'Opening in your main browser…';
+      }
+      // Extra hard kick for stubborn Instagram webviews
+      setTimeout(() => AnonBrowserGuard.openInMainBrowser(pageUrl), 50);
     });
   }
 

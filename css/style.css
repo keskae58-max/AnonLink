@@ -115,6 +115,8 @@ html.webview-blocked #guard-overlay {
   text-transform: uppercase;
   color: var(--text);
   cursor: pointer;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
   transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
@@ -309,6 +311,18 @@ html.webview-blocked #guard-overlay {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
+  align-items: center;
+}
+
+.guard-actions .glass-btn {
+  width: 100%;
+}
+
+.guard-status {
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--accent);
 }
 
 .admin-overlay {
