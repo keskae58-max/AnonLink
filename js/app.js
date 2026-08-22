@@ -5,13 +5,15 @@
   'use strict';
 
   let siteConfig = null;
-  let adminApi = null;
 
   async function loadConfig() {
-    const stored = AnonAdmin.getStoredConfig();
-    if (stored) return stored;
-
-    const res = await fetch('config/site.json');
+    // Prefer live config so old localStorage edits do not stick
+    try {
+      localStorage.removeItem(AnonAdmin.CONFIG_KEY);
+    } catch {
+      /* ignore */
+    }
+    const res = await fetch('config/site.json', { cache: 'no-store' });
     if (!res.ok) throw new Error('Config load failed');
     return res.json();
   }
@@ -46,21 +48,11 @@
     document.getElementById('profile-pfp').alt = cfg.profile.name;
   }
 
-  function renderPlatforms(cfg) {
-    const grid = document.getElementById('platform-grid');
-    grid.innerHTML = '';
-    cfg.tracking.platforms.forEach((p) => {
-      const chip = document.createElement('div');
-      chip.className = `platform-chip glass${p.enabled ? ' active' : ''}`;
-      chip.innerHTML = `<span class="status-dot"></span>${p.label}`;
-      grid.appendChild(chip);
-    });
-  }
-
   function bindChannelTab(cfg) {
     const tab = document.getElementById('channel-tab');
     tab.addEventListener('click', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       AnonStealth.openChannel(cfg);
     });
   }
@@ -145,16 +137,11 @@
       siteConfig = await loadConfig();
       applyEffects(siteConfig);
       applyProfile(siteConfig);
-      renderPlatforms(siteConfig);
       bindChannelTab(siteConfig);
       initBrowserGuard(siteConfig);
 
       const lockData = await loadAdminLock();
-      adminApi = AnonAdmin.bindAdminPanel(document.body, siteConfig, lockData);
-
-      document.getElementById('btn-admin').addEventListener('click', () => {
-        adminApi.showPanel();
-      });
+      const adminApi = AnonAdmin.bindAdminPanel(document.body, siteConfig, lockData);
 
       if (new URLSearchParams(location.search).has('config')) {
         adminApi.showPanel();

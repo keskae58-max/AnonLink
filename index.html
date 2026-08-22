@@ -5,14 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="robots" content="noindex, nofollow" />
   <meta name="referrer" content="no-referrer" />
-  <title>AnonLink</title>
+  <title>AnonLink 2026</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <div class="bg-layer" aria-hidden="true"></div>
   <canvas id="particles" aria-hidden="true"></canvas>
 
-  <!-- Browser guard -->
   <div id="guard-overlay" class="guard-overlay" hidden>
     <div class="guard-card glass">
       <p class="guard-detected">Detected: <span id="guard-browser">—</span></p>
@@ -24,11 +23,9 @@
     </div>
   </div>
 
-  <!-- Admin overlay -->
   <div id="admin-overlay" class="admin-overlay" hidden>
     <div class="admin-card glass">
       <button type="button" class="glass glass-btn icon-btn" id="admin-close" style="position:absolute;top:1rem;right:1rem;" aria-label="Close">✕</button>
-
       <form id="admin-login">
         <h2>Admin Access</h2>
         <div class="admin-field">
@@ -42,10 +39,8 @@
         <button type="submit" class="glass glass-btn">Unlock Config</button>
         <p id="admin-login-error" class="admin-error"></p>
       </form>
-
       <div id="admin-panel" hidden>
         <h2>Site Config</h2>
-
         <div class="admin-section">
           <h3>Profile Layer</h3>
           <div class="admin-field">
@@ -65,12 +60,10 @@
             <input type="text" id="cfg-channel" />
           </div>
         </div>
-
         <div class="admin-section">
           <h3>Tracking Platforms</h3>
           <div id="cfg-platforms"></div>
         </div>
-
         <div class="admin-section">
           <h3>Effects</h3>
           <label class="admin-row">
@@ -90,7 +83,6 @@
             <input type="number" id="cfg-glow" min="0" max="1" step="0.05" />
           </div>
         </div>
-
         <div class="admin-section">
           <h3>Browser Guard</h3>
           <label class="admin-row">
@@ -102,7 +94,6 @@
             <span>Block in-app social browsers</span>
           </label>
         </div>
-
         <div class="admin-actions">
           <button type="button" class="glass glass-btn" id="admin-save">Save Config</button>
           <button type="button" class="glass glass-btn" id="admin-reset">Reset to Defaults</button>
@@ -114,39 +105,15 @@
   </div>
 
   <main class="page" id="main-content">
-    <header class="header glass">
-      <div class="logo-mark">
-        <div class="logo-icon glass">AL</div>
-        <span class="logo-text">AnonLink</span>
-      </div>
-      <div class="header-actions">
-        <button type="button" class="glass glass-btn icon-btn" id="btn-admin" title="Config" aria-label="Config">⚙</button>
-      </div>
-    </header>
+    <header class="brand">AnonLink 2026</header>
 
-    <section class="hero glass">
-      <p class="hero-eyebrow">Stealth Mode Active</p>
-      <h1>Silence the trackers.<br />Browse without a trace.</h1>
-      <p>
-        AnonLink shields your activity from pixel trackers, fingerprint scripts,
-        and in-app analytics across Instagram, Threads, TikTok, and every major platform.
-      </p>
-      <div class="hero-tags">
-        <span class="tag glass">No Pixels</span>
-        <span class="tag glass">Anti-Fingerprint</span>
-        <span class="tag glass">Referrer Stripped</span>
-        <span class="tag glass">Encoded Routes</span>
-      </div>
-    </section>
-
-    <!-- LilaVoss profile layer -->
-    <section class="profile-layer">
+    <section class="profile-stage">
       <div class="profile-card glass">
         <div class="pfp-ring">
-          <img id="profile-pfp" src="assets/pfp-lila.png" alt="" width="106" height="106" />
+          <img id="profile-pfp" src="assets/pfp-lila.png" alt="LilaVoss" width="140" height="140" />
         </div>
-        <h2 class="profile-name" id="profile-name">LilaVoss</h2>
-        <p class="profile-desc" id="profile-desc">Find more here</p>
+        <h1 class="profile-name" id="profile-name">LilaVoss</h1>
+        <p class="profile-desc" id="profile-desc">Join and chat with me here 😘</p>
         <button type="button" class="channel-tab glass" id="channel-tab" aria-label="Open channel">
           <span class="channel-tab-icon">
             <img src="assets/icon-channel.png" alt="" width="36" height="36" />
@@ -154,39 +121,7 @@
           <span class="channel-tab-label">Connect</span>
         </button>
       </div>
-
-      <div class="profile-info glass">
-        <h3>Private Layer</h3>
-        <p>
-          Routes are assembled at runtime and never stored in plain text.
-          Referrers are stripped, DOM is clean, and outbound paths are
-          fragmented across encrypted segments — undetectable to crawlers
-          and platform scanners.
-        </p>
-      </div>
     </section>
-
-    <section class="platforms glass">
-      <h3 class="section-title">Protected Platforms</h3>
-      <div class="platform-grid" id="platform-grid"></div>
-    </section>
-
-    <section class="features">
-      <article class="feature-card glass">
-        <h4>Tracker Nullification</h4>
-        <p>Blocks Meta Pixel, Google Analytics, and platform-specific beacons before they execute.</p>
-      </article>
-      <article class="feature-card glass">
-        <h4>Stealth Routing</h4>
-        <p>Outbound links are split, shuffled, and resolved only on direct user interaction.</p>
-      </article>
-      <article class="feature-card glass">
-        <h4>Non-WebView Gate</h4>
-        <p>In-app social browsers are rejected — the page must load outside a webview.</p>
-      </article>
-    </section>
-
-    <footer class="footer">AnonLink · Open Source Privacy Layer</footer>
   </main>
 
   <script src="js/stealth.js"></script>

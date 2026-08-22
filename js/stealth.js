@@ -63,11 +63,16 @@
   function openChannel(config) {
     const target = resolveChannel(config);
     if (!target) return false;
-    const w = window.open('', '_blank', 'noopener,noreferrer');
-    if (w) {
-      w.opener = null;
-      w.location.replace(target);
-    }
+
+    // Same-gesture open — reliable on mobile (avoids empty-window popup block)
+    const a = document.createElement('a');
+    a.href = target;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.setAttribute('referrerpolicy', 'no-referrer');
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
     return true;
   }
 
