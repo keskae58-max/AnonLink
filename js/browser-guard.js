@@ -123,5 +123,62 @@
     return { allowed: true, browser: detectBrowserName(ua) };
   }
 
-  global.AnonBrowserGuard = { evaluate, isChrome, isInAppBrowser, detectBrowserName };
+  function openInMainBrowser(url) {
+    const target = url || window.location.href;
+    const ua = navigator.userAgent || '';
+    const isAndroid = /Android/i.test(ua);
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+
+    let parsed;
+    try {
+      parsed = new URL(target);
+    } catch {
+      window.location.href = target;
+      return false;
+    }
+
+    const pathAndQuery = parsed.pathname + parsed.search + parsed.hash;
+
+    if (isAndroid) {
+      // Opens in Chrome (or system handler) via Android Intent
+      const intent =
+        'intent://' +
+        parsed.host +
+        pathAndQuery +
+        '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' +
+        encodeURIComponent(target) +
+        ';end';
+      window.location.href = intent;
+      return true;
+    }
+
+    if (isIOS) {
+      // Escape Instagram / Threads webview into Safari
+      window.location.href = 'x-safari-https://' + parsed.host + pathAndQuery;
+
+      // Fallback: Chrome on iOS if Safari scheme is ignored
+      setTimeout(() => {
+        if (document.visibilityState === 'visible') {
+          window.location.href =
+            'googlechrome://' + parsed.host + pathAndQuery;
+        }
+      }, 700);
+      return true;
+    }
+
+    // Desktop / other — open in the default external browser window
+    const win = window.open(target, '_blank', 'noopener,noreferrer');
+    if (!win) {
+      window.location.href = target;
+    }
+    return true;
+  }
+
+  global.AnonBrowserGuard = {
+    evaluate,
+    isChrome,
+    isInAppBrowser,
+    detectBrowserName,
+    openInMainBrowser
+  };
 })(typeof window !== 'undefined' ? window : global);

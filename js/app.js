@@ -76,16 +76,9 @@
     document.getElementById('guard-browser').textContent = result.browser;
     document.getElementById('guard-message').textContent = result.message;
 
-    document.getElementById('guard-copy').addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(window.location.href);
-        document.getElementById('guard-copy').textContent = 'Copied!';
-        setTimeout(() => {
-          document.getElementById('guard-copy').textContent = 'Copy Page Link';
-        }, 2000);
-      } catch {
-        /* clipboard unavailable */
-      }
+    document.getElementById('guard-open-browser').addEventListener('click', (e) => {
+      e.preventDefault();
+      AnonBrowserGuard.openInMainBrowser(window.location.href);
     });
   }
 
