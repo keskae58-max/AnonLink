@@ -1,0 +1,12 @@
+{
+  "name": "anonlink",
+  "version": "1.0.0",
+  "description": "Stealth tracking shield — GitHub Pages site",
+  "private": true,
+  "scripts": {
+    "create-admin": "node scripts/create-admin.js",
+    "serve": "npx --yes serve . -p 8080"
+  },
+  "keywords": ["privacy", "tracking", "github-pages"],
+  "license": "MIT"
+}
