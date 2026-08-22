@@ -45,41 +45,31 @@ body {
   background: #030303;
 }
 
-.bg-gif {
+.bg-image {
   position: absolute;
-  inset: -6%;
-  width: 112%;
-  height: 112%;
+  inset: -8%;
+  width: 116%;
+  height: 116%;
   object-fit: cover;
+  object-position: center 28%;
   display: block;
   pointer-events: none;
-  animation: bg-drift 16s ease-in-out infinite alternate;
-  will-change: transform;
+  /* Fancy soft blur ~35–45% feel */
+  filter: blur(12px) saturate(1.05) brightness(0.88);
+  transform: scale(1.08);
+  will-change: filter, transform;
 }
 
 .bg-layer::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.28) 0%,
-    rgba(0, 0, 0, 0.48) 50%,
-    rgba(0, 0, 0, 0.72) 100%
-  );
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.45) 55%, rgba(0, 0, 0, 0.72) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.4) 50%, rgba(0, 0, 0, 0.7) 100%);
   pointer-events: none;
-}
-
-@keyframes bg-drift {
-  0% {
-    transform: scale(1.02) translate(0%, 0%);
-  }
-  50% {
-    transform: scale(1.08) translate(-1.5%, 1%);
-  }
-  100% {
-    transform: scale(1.04) translate(1%, -1.5%);
-  }
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
 }
 
 html.webview-blocked body > *:not(#guard-overlay) {
@@ -441,7 +431,6 @@ html.webview-blocked #guard-overlay {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bg-gif,
   .pfp-ring,
   .profile-stage {
     animation: none;
