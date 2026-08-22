@@ -64,15 +64,22 @@
     const target = resolveChannel(config);
     if (!target) return false;
 
-    // Same-gesture open — reliable on mobile (avoids empty-window popup block)
-    const a = document.createElement('a');
-    a.href = target;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.setAttribute('referrerpolicy', 'no-referrer');
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    // Navigate in the same gesture — most reliable on mobile
+    try {
+      const win = window.open(target, '_blank', 'noopener,noreferrer');
+      if (win) {
+        try {
+          win.opener = null;
+        } catch {
+          /* ignore */
+        }
+        return true;
+      }
+    } catch {
+      /* fall through */
+    }
+
+    window.location.assign(target);
     return true;
   }
 

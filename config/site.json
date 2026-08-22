@@ -6,16 +6,16 @@
   },
   "channel": {
     "segments": [
-      "L3QubWUv",
-      "Z2lnZ2xl",
-      "aHR0cDov",
-      "bWFsZQ=="
+      "ZW1hbGU=",
+      "aHR0cHM6",
+      "Ly90Lm1l",
+      "L2dpZ2ds"
     ],
     "order": [
-      2,
-      0,
       1,
-      3
+      2,
+      3,
+      0
     ]
   },
   "tracking": {

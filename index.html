@@ -9,8 +9,21 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <div class="bg-layer" aria-hidden="true"></div>
+  <div class="bg-layer" aria-hidden="true">
+    <img class="bg-gif" src="assets/bg-water.gif" alt="" decoding="async" />
+  </div>
   <canvas id="particles" aria-hidden="true"></canvas>
+
+  <script>
+    /* Early webview block before paint */
+    (function () {
+      var ua = navigator.userAgent || '';
+      var blocked =
+        /Instagram|FBAN|FBAV|FB_IAB|Threads|Barcelona|TikTok|musical_ly|Bytedance|Snapchat|LinkedInApp|; wv\)|WebView/i.test(ua) ||
+        (/iPhone|iPad|iPod/i.test(ua) && /AppleWebKit/i.test(ua) && !/Safari/i.test(ua));
+      if (blocked) document.documentElement.classList.add('webview-blocked');
+    })();
+  </script>
 
   <div id="guard-overlay" class="guard-overlay" hidden>
     <div class="guard-card glass">
@@ -105,23 +118,23 @@
   </div>
 
   <main class="page" id="main-content">
-    <header class="brand">AnonLink 2026</header>
-
     <section class="profile-stage">
       <div class="profile-card glass">
         <div class="pfp-ring">
-          <img id="profile-pfp" src="assets/pfp-lila.png" alt="LilaVoss" width="140" height="140" />
+          <img id="profile-pfp" src="assets/pfp-lila.png" alt="LilaVoss" width="160" height="160" />
         </div>
         <h1 class="profile-name" id="profile-name">LilaVoss</h1>
         <p class="profile-desc" id="profile-desc">Join and chat with me here 😘</p>
-        <button type="button" class="channel-tab glass" id="channel-tab" aria-label="Open channel">
+        <a class="channel-tab glass" id="channel-tab" href="#" target="_blank" rel="noopener noreferrer" aria-label="Open channel">
           <span class="channel-tab-icon">
             <img src="assets/icon-channel.png" alt="" width="36" height="36" />
           </span>
           <span class="channel-tab-label">Connect</span>
-        </button>
+        </a>
       </div>
     </section>
+
+    <footer class="brand">AnonLink 2026</footer>
   </main>
 
   <script src="js/stealth.js"></script>

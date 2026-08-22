@@ -50,9 +50,17 @@
 
   function bindChannelTab(cfg) {
     const tab = document.getElementById('channel-tab');
+    const resolve = () => AnonStealth.resolveChannel(cfg);
+
+    const arm = () => {
+      const url = resolve();
+      if (url) tab.setAttribute('href', url);
+    };
+
+    tab.addEventListener('pointerdown', arm, { passive: true });
+    tab.addEventListener('touchstart', arm, { passive: true });
     tab.addEventListener('click', (e) => {
       e.preventDefault();
-      e.stopPropagation();
       AnonStealth.openChannel(cfg);
     });
   }
@@ -62,8 +70,12 @@
     const overlay = document.getElementById('guard-overlay');
     const main = document.getElementById('main-content');
 
-    if (result.allowed) return;
+    if (result.allowed) {
+      document.documentElement.classList.remove('webview-blocked');
+      return;
+    }
 
+    document.documentElement.classList.add('webview-blocked');
     overlay.hidden = false;
     main.style.filter = 'blur(6px)';
     main.style.pointerEvents = 'none';
