@@ -58,7 +58,7 @@
     ]
   },
   "effects": {
-    "particles": true,
+    "particles": false,
     "glassBlur": 18,
     "strokeWidth": 1,
     "glowIntensity": 0.35
